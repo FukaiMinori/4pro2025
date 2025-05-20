@@ -7,7 +7,7 @@ import { useControls } from 'leva'
 import vertexShader from "./vshader.vert?raw";
 //import fragmentShader from "./sankaku.frag?raw";
 import fragmentShader from "./may13.frag?raw";
-import type { alphaT } from 'three/tsl';
+//import type { alphaT } from 'three/tsl';
 
 
 declare global
