@@ -19,8 +19,9 @@ declare global
 
 
 function App() {
-  const { radius, alpha } = useControls({radius :{value:1.0, min: 0.5, max: 2.0, step:0.05},
-					alpha :{value:0.7, min: 0.0, max: 1.0, step:0.05}
+  const { radius, wallZ, theta } = useControls({radius :{value:1.0, min: 0.5, max: 2.0, step:0.05},
+					wallZ :{value:0.0, min: -0.15, max: 0.3, step:0.005},
+          theta :{value:0.0, min: -3.14159*0.1, max: 3.14159*0.1, step:0.005}
 				       });
   return (
     <>
@@ -40,7 +41,7 @@ function App() {
 		    <mesh>
 			<planeGeometry args={[2,2]}/>
 			{/* @ts-ignore TS2339: Property 'diffMaterial' does not exist on type 'JSX.IntrinsicElements'.*/}
-			<diffMaterial key={DiffMaterial.key} glslVersion={THREE.GLSL3} radius={radius} alpha={alpha}/>
+			<diffMaterial key={DiffMaterial.key} glslVersion={THREE.GLSL3} radius={radius} wallZ={wallZ} theta={theta}/>
 		    </mesh>
 		</Hud>
 	    </Canvas>
@@ -52,7 +53,8 @@ function App() {
 const DiffMaterial = shaderMaterial(
   {u_resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
    radius: 1.0,
-   alpha: 1.0
+   wallZ: 0.0,
+   theta: 0.0
   },
   vertexShader,
   fragmentShader
