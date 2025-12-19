@@ -6,20 +6,47 @@ import { useControls } from 'leva'
 //import './styles.css'
 import vertexShader from "./vshader.vert?raw";
 //import fragmentShader from "./sankaku.frag?raw";
-import fragmentShader from "./sphericalFibo9.frag?raw";
+import shadera from "./sphericalFibo9.frag?raw";
+import shaderb from "./sphericalFibo11.frag?raw";
+import shaderc from "./sphericalFibo12.frag?raw";
 import { useEffect, useState } from 'react';
 //import type { alphaT } from 'three/tsl';
 
+//import { useState } from "react";
+import { Box, Select, MenuItem } from "@mui/material";
+
+
+const shaders = {
+  a:{
+    name:"recursive",
+    fragment:shadera,
+  },
+  b:{
+    name:"celluler noise",
+    fragment:shaderb,
+  },
+  c:{
+    name:"voronoi",
+    fragment:shaderc,
+  }
+}
 
 declare global
 { namespace JSX
  { interface IntrinsicElements
-        { "diffMaterial": any}
+        { "diffMaterialA" :any
+          "diffMaterialB" :any
+          "diffMaterialC" :any
+        }
  }
 }
 
 
+
 function App() {
+
+  const [shaderKey, setShaderKey] = useState<any>("voronoi");
+  
   const { radius, num, an, embedSmall, embedSmall2} = useControls({
     radius :{value:1.0, min: 0.5, max: 2.0, step:0.05},
     num :{value:130.0, min: 10.0, max: 1000.0, step:1.0},
@@ -39,6 +66,19 @@ function App() {
     )
   return (
     <>
+    {/* UI */}
+    <Box sx={{ position: "absolute", zIndex: 10, p: 2 }}>
+      <Select
+        value={shaderKey}
+        onChange={(e) => setShaderKey(e.target.value)}
+      >
+        {Object.entries(shaders).map(([key, s]) => (
+          <MenuItem key={key} value={key}>
+            {s.name}
+          </MenuItem>
+        ))}
+      </Select>
+    </Box>
 	<div style={{ height: "100dvh", width: "100dvw" }}>
 	    <Canvas>
 		<Hud>
@@ -74,8 +114,44 @@ const DiffMaterial = shaderMaterial(
    uTime: 0.0
   },
   vertexShader,
-  fragmentShader
 );
-extend({DiffMaterial});
+const DiffMaterialA = shaderMaterial(
+  {u_resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
+    radius: 1.0,
+    num: 130.0,
+    an: 0.0,
+    embedSmall: 1.7,
+    embedSmall2: 1.7,
+    uTime: 0.0
+   },
+  vertexShader,
+  shadera
+);
+const DiffMaterialB = shaderMaterial(
+  {u_resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
+    radius: 1.0,
+    num: 130.0,
+    an: 0.0,
+    embedSmall: 1.7,
+    embedSmall2: 1.7,
+    uTime: 0.0
+   },
+  vertexShader,
+  shaderb
+);
+const DiffMaterialC = shaderMaterial(
+  {u_resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
+    radius: 1.0,
+    num: 130.0,
+    an: 0.0,
+    embedSmall: 1.7,
+    embedSmall2: 1.7,
+    uTime: 0.0
+   },
+  vertexShader,
+  shaderc
+);
+extend({DiffMaterialA, DiffMaterialB, DiffMaterialC});
+
 
 export default App
