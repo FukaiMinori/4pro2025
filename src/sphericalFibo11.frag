@@ -2,7 +2,6 @@ precision highp float;                 // 浮動小数点精度を高く設定�
 
 uniform float uTime;                  // 経過時間
 uniform vec2  u_resolution;            // 画面解像度（幅, 高さ）
-uniform float radius;                  // 半径（最終的に色のゆらぎで使用）
 uniform float num;                     // 球面上の点の総数
 uniform float an;                      // カメラの回転角
 out vec4 fragColor;                    // 出力するピクセルの最終 RGBA 値
