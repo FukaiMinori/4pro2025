@@ -5,7 +5,7 @@ import { Hud, OrthographicCamera, shaderMaterial } from '@react-three/drei'
 import { useControls } from 'leva'
 //import './styles.css'
 import vertexShader from "./vshader.vert?raw";
-import shaderA from "./sphericalFibo9.frag?raw";
+import shaderA from "./sphericalFibo13.frag?raw";
 import shaderB from "./sphericalFibo11.frag?raw";
 import shaderC from "./sphericalFibo12.frag?raw";
 import { useEffect, useState } from 'react';
@@ -20,12 +20,12 @@ declare global
 }
 
 function App() {
-  const [shaderKey, setShaderKey] = useState<any>("c");
+  const [shaderKey, setShaderKey] = useState<any>("a");
   const { num, an, embedSmall, embedSmall2} = useControls({
     num :{value:130.0, min: 10.0, max: 1000.0, step:1.0},
     an :{value:0.0, min:-3.14159 / 2.0, max:3.14159 / 2.0, step:0.1},
-    embedSmall :{value:1.7, min: 0.5, max: 2.0, step:0.005},
-    embedSmall2 :{value:1.7, min: 0.5, max: 2.0, step:0.005}
+    embedSmall :{value:1.7, min: 1.5, max: 2.0, step:0.005},
+    embedSmall2 :{value:1.9, min: 1.5, max: 2.0, step:0.005}
   });
 
   const [uTime, setUTime] = useState(0.0);
@@ -105,7 +105,7 @@ const DiffMaterial = shaderMaterial(
     num: 130.0,
     an: 0.0,
     embedSmall: 1.7,
-    embedSmall2: 1.7,
+    embedSmall2: 1.9,
     uTime: 0.0
    },
   vertexShader,

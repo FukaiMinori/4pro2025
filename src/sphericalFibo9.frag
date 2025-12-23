@@ -1,6 +1,5 @@
 precision highp float; // 浮動小数点精度を高く設定（演算誤差を低減）
 
-uniform float u_time; // 経過時間
 uniform vec2  u_resolution; // 画面解像度（幅, 高さ）
 uniform float num; // 球面上の点の総数
 uniform float an; // カメラの回転角
@@ -11,9 +10,7 @@ out vec4 fragColor; // 出力するピクセルの最終 RGBA 値
 // Inigo Quilez - Golden spiral sphere mapping demo
 
 // p: 球面上の法線ベクトル（単位ベクトル）
-// 戻り値: 
-// x = 最も近い黄金螺旋点のインデックス
-// y = その点との距離
+// 戻り値:x = 最も近い黄金螺旋点のインデックス, y = その点との距離
 vec2 inverseSF( vec3 p ) { 
     const float kTau = 6.28318530718; // 2π
     const float kPhi = (1.0 + sqrt(5.0)) / 2.0; // 黄金比 Φ
@@ -76,6 +73,21 @@ float hash1(float n) {
     return fract(sin(n) * 158.5453123);
 }
 
+vec3 cauliflowerColor(float seed, float shade) {
+    // ベース：白〜黄緑
+    vec3 base = mix(
+        vec3(0.95, 0.96, 0.90),   // 白
+        vec3(0.8039, 0.9059, 0.7373),   // 黄緑
+        shade
+    );
+
+    // 微妙なムラ
+    float n = hash1(seed * 17.3);
+    base += 0.05 * (n - 0.5);
+
+    return clamp(base, 0.0, 1.0);
+}
+
 // インデックス id から単位球面上の3D位置 q を返す
 vec3 fibonacciPoint(float id, float total) {
     const float kTau = 6.28318530718;
@@ -129,14 +141,51 @@ void getNearest4Ids(vec3 p, out float ids[4]) {
     }
 }
 
+//子球処理
+bool hitSubSphere(
+    vec3 ro, vec3 rd,
+    vec3 center, float radius,
+    float tBigOcc, bool bigBlocks,
+    inout float tmin, inout vec3 pos, inout vec3 col, inout float occ
+){
+    float t;
+    if (!intersectSphere(ro, rd, center, radius, t)) return false;
+    if (t <= 0.0) return false;
+
+    // 大球の遮蔽チェック
+    if (bigBlocks && t >= tBigOcc - relEps(t)) return false;
+    if (t >= tmin - relEps(tmin)) return false;
+
+    // ヒット情報
+    vec3 hitPos = ro + t * rd;
+    vec3 hitNor = normalize(hitPos - center);
+    vec2 fi     = inverseSF(hitNor);
+
+    float shade = clamp(0.6 + 0.4 * fi.y, 0.0, 1.0);
+    vec3  c     = cauliflowerColor(fi.x + 10.0, shade);
+
+    // 子球は少し明るく
+    c *= 1.05;
+
+    float o = 0.5 + 0.5 * hitNor.y;
+
+    // 更新
+    tmin = t;
+    pos  = hitPos;
+    col  = c;
+    occ  = mix(1.0, o, 0.35);
+
+    return true;
+}
+
 // 任意：大球外突起のフィルタ（使う場合のみ呼ぶ）
 bool protrudesOut(vec3 center, float r, vec3 bigCenter, float bigR) {
     return (length(center - bigCenter) + r) > (bigR + 1e-5);
 }
 
 void testBump(vec3 ro, vec3 rd, vec3 sc, vec3 q,
-              inout float tmin, inout vec3 pos, inout vec3 col, inout float occ) {
-
+   inout float tmin, inout vec3 pos, inout vec3 col, inout float occ)
+{
     float bumpR0    = 0.3;
     float subRScale = 0.35;
 
@@ -146,78 +195,45 @@ void testBump(vec3 ro, vec3 rd, vec3 sc, vec3 q,
 
     float subR    = bumpR0 * subRScale;
 
-    // 大球の遮蔽距離（あるなら）
     float tBigOcc;
     bool bigBlocks = intersectSphere(ro, rd, sc, 1.0, tBigOcc);
 
-    // 子球（初期方向）
+    // --- 子球（初期方向） ---
     vec3 q2_init   = normalize(q);
     vec3 subC_init = sphC + q2_init * (rS + subR * (1.0 - embedSmall2));
 
-    // 1) 初期方向の子球
-    float hSub0;
-    if (intersectSphere(ro, rd, subC_init, subR, hSub0) && hSub0 > 0.0) {
-        // 大球が遮るなら、その距離より手前だけ
-        if ((!bigBlocks || hSub0 < tBigOcc - relEps(hSub0)) && hSub0 + relEps(tmin) < tmin) {
-            vec3 hitPos2 = ro + hSub0 * rd;
-            vec3 hitNor2 = normalize(hitPos2 - subC_init);
-            vec2 fi2     = inverseSF(hitNor2);
+    hitSubSphere(ro, rd, subC_init, subR, tBigOcc, bigBlocks,
+                 tmin, pos, col, occ);
 
-            float edgeAmp = clamp(0.3 + 0.4 * fi2.y, 0.0, 1.0);
-            vec3  subCol  = 0.5 + edgeAmp * sin(hash1(fi2.x * 16.0) * 3.0 + vec3(3.0, 1.2, 2.0));
-            float subOcc  = 0.5 + 0.5 * hitNor2.y;
+    // --- 親球 ---
+    float tS;
+    if (intersectSphere(ro, rd, sphC, rS, tS) && tS > 0.0 &&
+        (!bigBlocks || tS < tBigOcc - relEps(tS)) &&
+        tS < tmin - relEps(tmin))
+    {
+        vec3 hitPos = ro + tS * rd;
+        vec3 hitNor = normalize(hitPos - sphC);
+        vec2 fiHit  = inverseSF(hitNor);
 
-            tmin = hSub0;
-            pos  = hitPos2;
-            col  = subCol * subOcc;
-            occ  = subOcc;
-        }
-    }
+        float shade = clamp(0.4 + 0.6 * fiHit.y, 0.0, 1.0);
+        vec3 iterCol = cauliflowerColor(fiHit.x, shade);
 
-    // 2) 親小球
-    float hS;
-    if (intersectSphere(ro, rd, sphC, rS, hS) && hS > 0.0) {
-        // 大球が遮るなら、その距離より手前だけ
-        if ((!bigBlocks || hS < tBigOcc - relEps(hS)) && hS + relEps(tmin) < tmin) {
-            vec3 hitPos = ro + hS * rd;
-            vec3 hitNor = normalize(hitPos - sphC);
-            vec2 fiHit  = inverseSF(hitNor);
+        iterCol *= 0.99 + 0.20 * hitNor.y;
+        float iterOcc = 0.2 + 0.2 * hitNor.y;
 
-            float noiseAmp = mix(0.1, 0.5, clamp(fiHit.y * 2.0, 0.0, 1.0));
-            vec3 iterCol   = 0.2 + noiseAmp * sin(hash1(fiHit.x * 13.0) * 3.0 + 1.0 + vec3(0.0,1.0,1.0));
-            float iterOcc  = 0.2 + 0.2 * hitNor.y;
+        tmin = tS;
+        pos  = hitPos;
+        col  = iterCol;
+        occ  = mix(1.0, iterOcc, 0.35);
 
-            tmin = hS;
-            pos  = hitPos;
-            col  = iterCol * iterOcc;
-            occ  = iterOcc;
+        // --- 精密化子球 ---
+        vec3 q2_ref   = normalize(fibonacciPoint(fiHit.x, 1.0));
+        vec3 subC_ref = sphC + q2_ref * (rS + subR * (1.0 - embedSmall2));
 
-            // 3) 親ヒット後の精密化子球
-            vec3 q2_ref   = normalize(fibonacciPoint(fiHit.x, 1.0));
-            vec3 subC_ref = sphC + q2_ref * (rS + subR * (1.0 - embedSmall2));
-
-            float hSub1;
-            if (intersectSphere(ro, rd, subC_ref, subR, hSub1) && hSub1 > 0.0) {
-                if ((!bigBlocks || hSub1 < tBigOcc - relEps(hSub1)) && hSub1 + relEps(tmin) < tmin) {
-                    vec3 hitPos2 = ro + hSub1 * rd;
-                    vec3 hitNor2 = normalize(hitPos2 - subC_ref);
-                    vec2 fi2     = inverseSF(hitNor2);
-
-                    float edgeAmp = clamp(0.3 + 0.4 * fi2.y, 0.0, 1.0);
-                    vec3  subCol  = 0.5 + edgeAmp * sin(hash1(fi2.x * 16.0) * 3.0 + vec3(3.0, 1.2, 2.0));
-                    float subOcc  = 0.5 + 0.5 * hitNor2.y;
-
-                    tmin = hSub1;
-                    pos  = hitPos2;
-                    col  = subCol * subOcc;
-                    occ  = subOcc;
-                }
-            }
-        }
+        hitSubSphere(ro, rd, subC_ref, subR, tBigOcc, bigBlocks,
+                     tmin, pos, col, occ);
     }
 }
-
-
 
 // main: ピクセルごとの描画処理
 void main() {
@@ -259,15 +275,13 @@ void main() {
             pos  = ro + hBig * rd;
             nor  = normalize(pos - sc);
             occ  = 0.5 + 0.5 * nor.y;
-            col  = vec3(0.9, 0.95, 1.0) * occ;
+            col = vec3(0.92, 0.94, 0.88) * occ;
             fi   = inverseSF(nor);
             hitBig = true;
         }
     }
 
  // 背景側: hitBig == false のとき
- // 背景側 ...
-// 背景側: hitBig == false のとき
 if (!hitBig) {
     float tBigOcc;
     bool bigBlocks = intersectSphere(ro, rd, sc, 1.0, tBigOcc); // 大球の潜在的オクルージョン距離
@@ -330,7 +344,9 @@ if (hitBig) {
 
     pos = ro + tmin * rd;
     col *= occ;
-    col = mix(col, vec3(1.0), 1.0 - exp(-0.003 * tmin * tmin));
+    col = mix(col, vec3(1.0), 0.15 * (1.0 - exp(-0.002 * tmin * tmin)));
+
+
     // ガンマ補正
     col = sqrt(col);
     fragColor = vec4(col, 1.0);
