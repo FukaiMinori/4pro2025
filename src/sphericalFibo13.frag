@@ -1,5 +1,6 @@
 precision highp float;
 
+uniform float uTime;
 uniform vec2  u_resolution;
 uniform float num;
 uniform float an;
@@ -144,7 +145,7 @@ bool protrudesOut(vec3 center, float r, vec3 bigCenter, float bigR) {
     return (length(center - bigCenter) + r) > (bigR + 1e-5);
 }
 
-// 子球ヒット共通処理
+// 小小球ヒット共通処理
 bool hitSubSphere(vec3 ro, vec3 rd, vec3 center, float radius,
     inout float tmin, inout vec3 pos, inout vec3 col, inout float occ
 ){
@@ -173,7 +174,7 @@ bool hitSubSphere(vec3 ro, vec3 rd, vec3 center, float radius,
     return true;
 }
 
-// 親小球ヒット処理
+// 小球ヒット処理
 bool hitParentSphere(vec3 ro, vec3 rd, vec3 center, float radius,
     inout float tmin, inout vec3 pos, inout vec3 col, inout float occ,
     out vec3 hitNor, out vec2 fiHit
@@ -213,17 +214,17 @@ void testBump(
     vec3  sphC    = sc + q * dCenter;
     float subR    = bumpR0 * subRScale;
 
-    // 子球（初期方向）
+    // 小小球（初期方向）
     vec3 q2_init   = normalize(q);
     vec3 subC_init = sphC + q2_init * (rS + subR * (1.0 - embedSmall2));
     hitSubSphere(ro, rd, subC_init, subR, tmin, pos, col, occ);
 
-    // 親小球
+    // 小球
     vec3 hitNor;
     vec2 fiHit;
     if (hitParentSphere(ro, rd, sphC, rS, tmin, pos, col, occ, hitNor, fiHit))
     {
-        // 親ヒット後の精密化子球
+        // 小球ヒット後の精密化小小球
         vec3 q2_ref   = normalize(fibonacciPoint(fiHit.x, num));
         vec3 subC_ref = sphC + q2_ref * (rS + subR * (1.0 - embedSmall2));
         hitSubSphere(ro, rd, subC_ref, subR, tmin, pos, col, occ);
@@ -335,7 +336,6 @@ void main() {
         return;
     }
 
-    // AO・フォグっぽいブレンド
     pos = ro + tmin * rd;
     col *= occ;
     col = mix(col, vec3(1.0), 0.15 * (1.0 - exp(-0.002 * tmin * tmin)));

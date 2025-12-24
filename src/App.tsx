@@ -8,6 +8,7 @@ import vertexShader from "./vshader.vert?raw";
 import shaderA from "./sphericalFibo13.frag?raw";
 import shaderB from "./sphericalFibo11.frag?raw";
 import shaderC from "./sphericalFibo12.frag?raw";
+import shaderD from "./sphericalFibo14.frag?raw";
 import { useEffect, useState } from 'react';
 import { Box, Select, MenuItem } from "@mui/material";
 
@@ -20,7 +21,7 @@ declare global
 }
 
 function App() {
-  const [shaderKey, setShaderKey] = useState<any>("a");
+  const [shaderKey, setShaderKey] = useState<any>("c");
   const { num, an, embedSmall, embedSmall2} = useControls({
     num :{value:130.0, min: 10.0, max: 1000.0, step:1.0},
     an :{value:0.0, min:-3.14159 / 2.0, max:3.14159 / 2.0, step:0.1},
@@ -42,6 +43,10 @@ function App() {
     c:{
       name:"voronoi",
       fragment:shaderC,
+    },
+    d:{
+      name:"domain warping",
+      fragment:shaderD,
     },
   };
 
