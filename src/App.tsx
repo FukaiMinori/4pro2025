@@ -5,10 +5,10 @@ import { Hud, OrthographicCamera, shaderMaterial } from '@react-three/drei'
 import { useControls } from 'leva'
 //import './styles.css'
 import vertexShader from "./vshader.vert?raw";
-import shaderA from "./sphericalFibo13.frag?raw";
-import shaderB from "./sphericalFibo11.frag?raw";
-import shaderC from "./sphericalFibo12.frag?raw";
-import shaderD from "./sphericalFibo14.frag?raw";
+import shaderA from "./cauliflower.frag?raw";
+import shaderB from "./cellular.frag?raw";
+import shaderC from "./voronoi.frag?raw";
+import shaderD from "./warping.frag?raw";
 import { useEffect, useState } from 'react';
 import { Box, Select, MenuItem } from "@mui/material";
 
@@ -33,11 +33,11 @@ function App() {
 
   const shaders:any = {
     a:{
-      name:"recursive",
+      name:"cauliflower",
       fragment:shaderA,
     },
     b:{
-      name:"celluler noise",
+      name:"cellular noise",
       fragment:shaderB,
     },
     c:{

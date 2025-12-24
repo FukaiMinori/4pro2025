@@ -190,7 +190,7 @@ bool hitParentSphere(vec3 ro, vec3 rd, vec3 center, float radius,
 
     float shade   = clamp(0.4 + 0.6 * fiHit.y, 0.0, 1.0);
     vec3  iterCol = cauliflowerColor(fiHit.x, shade);
-    iterCol      *= 0.99 + 0.20 * hitNor.y;
+    iterCol      *= 0.90 + 0.20 * hitNor.y;
     float iterOcc = 0.2 + 0.2 * hitNor.y;
 
     tmin = tS;
