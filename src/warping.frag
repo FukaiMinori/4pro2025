@@ -211,10 +211,12 @@ void main() {
     vec3 baseCol = flowCol;
 
     // フィボナッチ点の存在感を少し足す
+    /*
     float halo = 1.0 - smoothstep(0.0, 0.06, d); // 点の近くほど 1 に近い
     float contrast = mix(1.0, 1.25, halo);
+    */
 
-    col = baseCol * contrast;
+    col = baseCol;
 
     // 半径と距離で揺らぎ
     float wave = 1.0 + 0.04 * sin(60.0 * radius * d);
