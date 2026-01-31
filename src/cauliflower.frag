@@ -331,11 +331,9 @@ void main() {
 
     // どこにも当たらなかった場合の背景
     if (tmin >= 1e19) {
-        col = vec3(0.6, 0.7, 0.9) * (0.65 + 0.35 * vv.y);
-        fragColor = vec4(sqrt(col), 1.0);
+        fragColor = vec4(1.0);
         return;
     }
-
     pos = ro + tmin * rd;
     col *= occ;
     col = mix(col, vec3(1.0), 0.15 * (1.0 - exp(-0.002 * tmin * tmin)));

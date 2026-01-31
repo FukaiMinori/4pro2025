@@ -80,18 +80,24 @@ vec2 hash22(vec2 p){
     return fract(sin(vec2(n, m)) * 43758.5453);
 }
 
-float fdist21(vec2 p){
-    vec2 n = floor(p + 0.5); //最も近い格子点
+float fdist21(vec2 p, float freq){
+    vec2 n = floor(p + 0.5); 
     float dist = sqrt(2.0);
+    
     for(float j = 0.0; j <= 2.0; j++){
-        vec2 glid; //近くの格子点
+        vec2 glid;
         glid.y = n.y + sign(mod(j, 2.0) - 0.5) * ceil(j * 0.5);
         if(abs(glid.y - p.y) - 0.5 > dist){
             continue;
         }
         for(float i = -1.0; i <= 1.0; i++){
             glid.x = n.x + i;
-            vec2 jitter = hash22(glid) -0.5;
+            
+            // ★ポイント: X座標を周波数でループさせる
+            // これにより uv.x=0.0 と uv.x=1.0 が同じハッシュ値を参照し、繋ぎ目が消える
+            vec2 wrappedGlid = vec2(mod(glid.x, freq), glid.y);
+            
+            vec2 jitter = hash22(wrappedGlid) - 0.5;
             dist = min(dist, length(glid + jitter - p));
         }
     }
@@ -143,48 +149,41 @@ void main() {
     h = b * b - c;                 //判別式
 
     if (h > 0.0) {
-        h = -b - sqrt(h);          //t1→レイが球と最初に当たる交差距離
+        h = -b - sqrt(h);
         if (h < tmin) {
             tmin = h;
-            nor = normalize(ro + h * rd - sc); // 法線
-            occ = 0.5 + 0.5 * nor.y;           // yが大きい(上向きほど明るい
+            nor = normalize(ro + h * rd - sc); 
+            occ = 0.5 + 0.5 * nor.y;
         }
 
-        // 球面の最近傍フィボナッチ点
         vec2 fi = inverseSF(nor);
 
-        // 球面座標へ変換（0〜1 正規化）
         const float TAU = 6.28318530718;
         const float PI = 3.14159265359;
-        float phi   = atan(nor.y, nor.x);   // -π〜π
-        float theta = acos(nor.z);          // 0〜π
+        
+        // 経度を -PI〜PI から 0〜1 に変換
+        float phi = atan(nor.y, nor.x); 
+        float theta = acos(nor.z);
         vec2 uv = vec2(phi / TAU + 0.5, theta / PI);
 
-        // num に応じて胞体ノイズの細かさを変える
-        float freq = sqrt(max(num, 1.0));
+        // ★ポイント: freq を整数にキャストする（1周で模様を完結させるため）
+        float freq = floor(sqrt(max(num, 1.0)));
 
-        // 距離を正規化（点の近くほど0、離れるほど1）
         float dNorm = fi.y * sqrt(num);
-        float fibMask = 1.0 - smoothstep(0.2, 1.0, dNorm); // 点の近くほど 1
-
-        // fi.x をランダム化
+        float fibMask = 1.0 - smoothstep(0.2, 1.0, dNorm);
         float fibRand = hash1(fi.x * 7.123);
 
-        // 胞体ノイズの座標を揺らす
         vec2 fibOffset = 0.05 * fibMask * vec2(
             sin(fibRand * 6.2831 + uTime * 0.2),
             cos(fibRand * 6.2831 + uTime * 0.2)
         );
 
-        // 胞体ノイズ
-        float n = fdist21(uv * freq + fibOffset);
+        // ★修正した fdist21 を呼び出す（引数に freq を追加）
+        float n = fdist21(uv * freq + fibOffset, freq);
 
-        // コントラスト調整
         float gray = 1.0 - n;
         gray = pow(gray, 0.7);
-
         col = vec3(gray);
-
     }
 
     // 背景フェード
