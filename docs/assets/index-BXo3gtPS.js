@@ -4441,7 +4441,7 @@ void main() {
     vec2 p = (-u_resolution.xy + 2.0 * fragCoord.xy) / u_resolution.y;
 
     // カメラ設定
-    vec3 ro = vec3(2.5 * cos(0.4*uTime), 1.0, 2.5 * sin(0.4*uTime));
+    vec3 ro = vec3(2.5 * cos(an), 1.0, 2.5 * sin(an));
     vec3 ta = vec3(0.0, 1.0, 0.0); // 注視点。カメラはここに向かっている
 
     vec3 ww = normalize(ta - ro); //カメラの前方向(正規化したta-ro)
